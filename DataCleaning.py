@@ -31,18 +31,6 @@ swagger_config = {
 }
 swagger = Swagger(app, template = swagger_template, config = swagger_config)
 
-@swag_from("docs/hello_world.yml", methods=['GET'])
-@app.route('/', methods=['GET'])
-def hello_world():
-    json_response = {
-        'status_code' : 200,
-        'description' : "Menyapa Hello World",
-        'data' : "Hello World",
-    }
-    
-    response_data = jsonify(json_response)
-    return response_data
-
 #Endpoint untuk membersihkan data dari form
 @swag_from("docs/formDataCleaning.yml", methods=['POST'])
 @app.route('/form-data-cleaning',methods=['POST'])
@@ -61,20 +49,33 @@ def form_data_cleaning():
 
 @swag_from("docs/fileDataCleaning.yml", methods=['POST'])
 @app.route('/file-data-cleaning',methods=['POST'])
-def form_data_cleansing():
-    
+def file_data_cleaning():
     #memulai upload
     fileUpload = request.files['fileUpload']
-    #fileName = fileUpload.filename
-    
-    #membaca file yang telah diupload
-    df = pd.read_csv(fileUpload, encoding='latin-1')
+    fileName = fileUpload.filename
+    fileNameExt = re.findall(r'[.]\w+',fileName)
+    if fileNameExt[0] == ".csv":
+        #membaca file yang telah diupload
+        df = pd.read_csv(fileUpload, encoding='latin-1')
+        #mencari data yang bisa dilakukan cleaning
+        
+        df_type = df.dtypes.to_list()
+        df_columns = df.columns.to_list()
+        #df_newColl = pd.DataFrame()
+        #df_newColl_list = []
+        i = 0
 
-    #mencari data yang bisa dilakukan cleaning
-    tbc = df['Tweet']
-    cleanedTweet = tbc.replace(r'[^0-9A-Za-z]',' ',regex=True).astype('str')
-    cleanTwList = cleanedTweet.to_list()
-    return cleanTwList
+        for i in range (i,len(df_type)) :
+            if df_type[i] == "object":
+                tobecleaned = df[df_columns[i]]
+                cleanedTweet = tobecleaned.replace(r'[^0-9A-Za-z]',' ',regex=True).astype('str')
+                cleanTwList = cleanedTweet.to_list()
+                cleanTwList = [x.strip(' ') for x in cleanTwList] #menghilangkan spasi yang tidak penting
+                cleanTwList = [re.sub(r'\s+',' ',x) for x in cleanTwList] #menghilangkan spasi yang berlebihan
+                i += 1
+            else:
+                pass
+        return cleanTwList
 
 if __name__ == '__main__':
     app.run()
