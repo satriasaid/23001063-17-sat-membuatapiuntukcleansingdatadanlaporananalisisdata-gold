@@ -1,4 +1,5 @@
 import re
+import pandas as pd
 from flask import Flask, jsonify, request
 from flasgger import Swagger, LazyString, LazyJSONEncoder, swag_from
 
@@ -43,9 +44,9 @@ def hello_world():
     return response_data
 
 #Endpoint untuk membersihkan data dari form
-@swag_from("docs/formDataCleansing.yml", methods=['POST'])
-@app.route('/form-data-cleansing',methods=['POST'])
-def form_data_cleansing():
+@swag_from("docs/formDataCleaning.yml", methods=['POST'])
+@app.route('/form-data-cleaning',methods=['POST'])
+def form_data_cleaning():
 
     text = request.form.get('text')
 
@@ -57,6 +58,23 @@ def form_data_cleansing():
 
     response_data = jsonify(json_response)
     return response_data
+
+@swag_from("docs/fileDataCleaning.yml", methods=['POST'])
+@app.route('/file-data-cleaning',methods=['POST'])
+def form_data_cleansing():
+    
+    #memulai upload
+    fileUpload = request.files['fileUpload']
+    #fileName = fileUpload.filename
+    
+    #membaca file yang telah diupload
+    df = pd.read_csv(fileUpload, encoding='latin-1')
+
+    #mencari data yang bisa dilakukan cleaning
+    tbc = df['Tweet']
+    cleanedTweet = tbc.replace(r'[^0-9A-Za-z]',' ',regex=True).astype('str')
+    cleanTwList = cleanedTweet.to_list()
+    return cleanTwList
 
 if __name__ == '__main__':
     app.run()
