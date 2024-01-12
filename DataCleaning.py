@@ -1,4 +1,4 @@
-import re
+import re, sqlite3
 import pandas as pd
 from flask import Flask, jsonify, request
 from flasgger import Swagger, LazyString, LazyJSONEncoder, swag_from
@@ -57,6 +57,13 @@ def file_data_cleaning():
     if fileNameExt[0] == ".csv":
         #membaca file yang telah diupload
         df = pd.read_csv(fileUpload, encoding='latin-1')
+        
+        #membuat database untuk pre-processed data
+        conn_pre = sqlite3.connect('preprocessed_tweet.db')
+        c_pre = conn_pre.cursor()
+        c_pre.execute('''CREATE TABLE tweet_pre (Tweet varchar(1000), HS INT, Abusive INT, HS_Individual INT, HS_Group INT, HS_Religion INT, HS_Race INT, HS_Physical INT, HS_Gender INT, HS_Other INT, HS_Weak INT, HS_Moderate INT, HS_Strong INT)''')
+        df.to_sql('tweet_pre', conn_pre, if_exists='append', index = False)
+        
         #mencari data yang bisa dilakukan cleaning
         
         df_type = df.dtypes.to_list()
@@ -75,6 +82,15 @@ def file_data_cleaning():
                 i += 1
             else:
                 pass
+        
+        #membuat database untuk post-processed data
+        df_temp = df
+        df_temp['Tweet'] = cleanTwList
+        conn_post = sqlite3.connect('postprocessed_tweet.db')
+        c_post = conn_post.cursor()
+        c_post.execute('''CREATE TABLE tweet_post (Tweet varchar(1000), HS INT, Abusive INT, HS_Individual INT, HS_Group INT, HS_Religion INT, HS_Race INT, HS_Physical INT, HS_Gender INT, HS_Other INT, HS_Weak INT, HS_Moderate INT, HS_Strong INT)''')
+        df_temp.to_sql('tweet_post', conn_post, if_exists='append', index = False)
+
         return cleanTwList
 
 if __name__ == '__main__':
