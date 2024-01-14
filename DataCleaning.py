@@ -64,34 +64,64 @@ def file_data_cleaning():
         c_pre.execute('''CREATE TABLE tweet_pre (Tweet varchar(1000), HS INT, Abusive INT, HS_Individual INT, HS_Group INT, HS_Religion INT, HS_Race INT, HS_Physical INT, HS_Gender INT, HS_Other INT, HS_Weak INT, HS_Moderate INT, HS_Strong INT)''')
         df.to_sql('tweet_pre', conn_pre, if_exists='append', index = False)
         
-        #mencari data yang bisa dilakukan cleaning
-        
+        #STEP 1 : SMOOTH NOISY DATA AND RESOLVE CONSISTENCY
+
         df_type = df.dtypes.to_list()
         df_columns = df.columns.to_list()
-        #df_newColl = pd.DataFrame()
-        #df_newColl_list = []
         i = 0
+        typeCount = 0
+        error_list = []
 
-        for i in range (i,len(df_type)) :
-            if df_type[i] == "object":
-                tobecleaned = df[df_columns[i]]
-                cleanedTweet = tobecleaned.replace(r'[^0-9A-Za-z]',' ',regex=True).astype('str')
-                cleanTwList = cleanedTweet.to_list()
-                cleanTwList = [x.strip(' ') for x in cleanTwList] #menghilangkan spasi yang tidak penting
-                cleanTwList = [re.sub(r'\s+',' ',x) for x in cleanTwList] #menghilangkan spasi yang berlebihan
-                i += 1
-            else:
-                pass
-        
-        #membuat database untuk post-processed data
-        df_temp = df
-        df_temp['Tweet'] = cleanTwList
-        conn_post = sqlite3.connect('postprocessed_tweet.db')
-        c_post = conn_post.cursor()
-        c_post.execute('''CREATE TABLE tweet_post (Tweet varchar(1000), HS INT, Abusive INT, HS_Individual INT, HS_Group INT, HS_Religion INT, HS_Race INT, HS_Physical INT, HS_Gender INT, HS_Other INT, HS_Weak INT, HS_Moderate INT, HS_Strong INT)''')
-        df_temp.to_sql('tweet_post', conn_post, if_exists='append', index = False)
+        #Mengecek apakah jumlah kolom yang harus dilakukan cleaning lebih dari 1
+        for type in df_type:
+            if type == "object":
+                typeCount += 1
 
-        return cleanTwList
+        if typeCount == 1 :
+            for i in range (i,len(df_type)) :
+                if df_type[i] == "object":
+                    tobecleaned = df[df_columns[i]]
+                    cleanedTweet = tobecleaned.replace(r'(\\x\S+)','',regex=True).astype('str')
+                    cleanedTweet = cleanedTweet.replace(r'((\s{2}))',' ',regex=True).astype('str')
+                    cleanedTweet = cleanedTweet.replace(r'(\\n)',' ',regex=True).astype('str')
+                    cleanedTweet = cleanedTweet.replace(r'(?:RT\W+)',' ',regex=True).astype('str')
+                    cleanedTweet = cleanedTweet.replace(r'(?:USER\W+)',' ',regex=True).astype('str')
+                    cleanedTweet = cleanedTweet.replace(r'(?:USER)',' ',regex=True).astype('str')
+                    cleanedTweet = cleanedTweet.replace(r'(?:https:)\S+',' ',regex=True).astype('str')
+                    cleanedTweet = cleanedTweet.replace(r'(?:http)\S+',' ',regex=True).astype('str')
+                    cleanedTweet = cleanedTweet.replace(r'(?:https)\S+',' ',regex=True).astype('str')
+                    cleanedTweet = cleanedTweet.replace(r'(?:URL)',' ',regex=True).astype('str')
+                    cleanedTweet = cleanedTweet.replace(r'[^0-9A-Za-z]',' ',regex=True).astype('str')
+                    cleanTwList = cleanedTweet.to_list()
+                    cleanTwList = [x.strip(' ') for x in cleanTwList] #menghilangkan spasi yang tidak penting
+                    cleanTwList = [re.sub(r'\s+',' ',x) for x in cleanTwList] #menghilangkan spasi yang berlebihan
+                    i += 1
 
+                    #membuat database untuk post-processed data
+                    df_temp = df
+                    df_temp['Tweet'] = cleanTwList
+                    df_temp = df_temp.dropna()
+                    df_temp = df_temp.drop_duplicates()
+                    finalCleanTwList = df_temp['Tweet'].to_list()
+
+                    conn_post = sqlite3.connect('postprocessed_tweet.db')
+                    c_post = conn_post.cursor()
+                    c_post.execute('''CREATE TABLE tweet_post (Tweet varchar(1000), HS INT, Abusive INT, HS_Individual INT, HS_Group INT, HS_Religion INT, HS_Race INT, HS_Physical INT, HS_Gender INT, HS_Other INT, HS_Weak INT, HS_Moderate INT, HS_Strong INT)''')
+                    df_temp.to_sql('tweet_post', conn_post, if_exists='append', index = False)
+
+                else:
+                    pass
+        else:
+            error_colnum = "The uploaded file has more than 1 column to clean!"
+            error_list.append(error_colnum)
+            return error_list
+
+        return finalCleanTwList
+    
+    else:
+        error_notCSV = "the uploaded file is not CSV"
+        error_list.append(error_notCSV)
+        return error_list
+    
 if __name__ == '__main__':
     app.run()
