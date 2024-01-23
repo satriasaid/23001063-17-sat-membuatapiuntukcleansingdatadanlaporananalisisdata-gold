@@ -100,8 +100,38 @@ def file_data_cleaning():
                     #membuat database untuk post-processed data
                     df_temp = df
                     df_temp['Tweet'] = cleanTwList
+
+                    #menghilangkan null dan duplicates
                     df_temp = df_temp.dropna()
                     df_temp = df_temp.drop_duplicates()
+
+                    #mengganti kata alay menjadi baku
+                    df_alay = pd.read_csv("new_kamusalay.csv", encoding='latin-1')
+                    alay_list = df_alay['Alay'].to_list()
+                    normal_list = df_alay['Normal'].to_list()
+
+                    tw_alay = df_temp['Tweet']
+                    tw_alay_lower = tw_alay.str.lower()
+
+                    dup_tw_alay_lower = tw_alay_lower
+                    for i in range(len(alay_list)):
+                        tw_normal = dup_tw_alay_lower.replace(r'\b'+ alay_list[i] + r'\b',normal_list[i],regex=True).astype('str')
+                        i += 1
+                        dup_tw_alay_lower = tw_normal
+                    
+                    #melakukan sensorship abusive language
+                    df_abusive = pd.read_csv("abusive.csv")
+                    abusive_list = df_abusive['ABUSIVE'].to_list()
+
+                    for i in range(len(abusive_list)):
+                        tw_normal = dup_tw_alay_lower.replace(r'\b'+ abusive_list[i] + r'\b','(sensor)',regex=True).astype('str')
+                        i += 1
+                        dup_tw_alay_lower = tw_normal
+
+                    #meletakkan data hasil cleaning ke df_temp['Tweet']
+                    df_temp['Tweet'] = dup_tw_alay_lower
+
+                    #mengubah df_temp['Tweet'] ke dalam suatu list
                     finalCleanTwList = df_temp['Tweet'].to_list()
 
                     conn_post = sqlite3.connect('postprocessed_tweet.db')
