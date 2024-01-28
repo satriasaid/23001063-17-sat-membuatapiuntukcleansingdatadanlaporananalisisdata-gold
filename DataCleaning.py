@@ -103,10 +103,11 @@ def file_data_cleaning():
 
                     #menghilangkan null dan duplicates
                     df_temp = df_temp.dropna()
+                    df_temp = df_temp[df_temp['Tweet'] != '']
                     df_temp = df_temp.drop_duplicates()
 
                     #mengganti kata alay menjadi baku
-                    df_alay = pd.read_csv("new_kamusalay.csv", encoding='latin-1')
+                    df_alay = pd.read_csv("new_kamusalay.csv", encoding='latin-1', names=['Alay','Normal'])
                     alay_list = df_alay['Alay'].to_list()
                     normal_list = df_alay['Normal'].to_list()
 
