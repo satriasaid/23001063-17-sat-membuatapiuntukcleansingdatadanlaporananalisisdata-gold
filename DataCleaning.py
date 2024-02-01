@@ -31,6 +31,16 @@ swagger_config = {
 }
 swagger = Swagger(app, template = swagger_template, config = swagger_config)
 
+@app.route('/', methods=['GET'])
+def hello_world():
+    json_response = {
+        '3. status_code' : 200,
+        '1. description' : "Please Visit: ",
+        '2. data' : "http://127.0.0.1:5000/docs/",
+    }
+    response_data = jsonify(json_response)
+    return response_data
+
 #Endpoint untuk membersihkan data dari form
 @swag_from("docs/formDataCleaning.yml", methods=['POST'])
 @app.route('/form-data-cleaning',methods=['POST'])
@@ -105,6 +115,7 @@ def file_data_cleaning():
                     df_temp = df_temp.dropna()
                     df_temp = df_temp[df_temp['Tweet'] != '']
                     df_temp = df_temp.drop_duplicates()
+                    df_temp = df_temp[df_temp['Tweet'].duplicated() == False]
 
                     #mengganti kata alay menjadi baku
                     df_alay = pd.read_csv("new_kamusalay.csv", encoding='latin-1', names=['Alay','Normal'])
@@ -131,6 +142,12 @@ def file_data_cleaning():
 
                     #meletakkan data hasil cleaning ke df_temp['Tweet']
                     df_temp['Tweet'] = dup_tw_alay_lower
+
+                    #menghilangkan null dan duplicates part 2
+                    df_temp = df_temp.dropna()
+                    df_temp = df_temp[df_temp['Tweet'] != '']
+                    df_temp = df_temp.drop_duplicates()
+                    df_temp = df_temp[df_temp['Tweet'].duplicated() == False]
 
                     #mengubah df_temp['Tweet'] ke dalam suatu list
                     finalCleanTwList = df_temp['Tweet'].to_list()
